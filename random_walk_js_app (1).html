@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Random Walk, ABM e GBM</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 24px; }
+    canvas { border: 1px solid #ccc; display: block; margin-top: 16px; }
+    button, input { margin-right: 8px; padding: 8px; }
+    .legend { margin-top: 10px; }
+    .legend span { margin-right: 15px; }
+  </style>
+</head>
+<body>
+  <h1>Random Walk → Browniano → GBM</h1>
+
+  <label>x(0):</label>
+  <input id="start" type="number" value="100" />
+
+  <label>Passi n:</label>
+  <input id="steps" type="number" value="500" />
+
+  <label>μ (drift):</label>
+  <input id="mu" type="number" value="0.1" step="0.01" />
+
+  <label>σ (volatilità):</label>
+  <input id="sigma" type="number" value="0.2" step="0.01" />
+
+  <button onclick="runAll()">Simula tutto</button>
+
+  <canvas id="chart" width="900" height="400"></canvas>
+
+  <div class="legend">
+    <span style="color:blue">■ Random Walk</span>
+    <span style="color:red">■ Browniano</span>
+    <span style="color:green">■ GBM</span>
+  </div>
+
+  <script>
+    function randomStep() {
+      return Math.random() < 0.5 ? -1 : 1;
+    }
+
+    function generateRW(x0, n) {
+      const values = [x0];
+      for (let i = 1; i <= n; i++) {
+        values[i] = values[i - 1] + randomStep();
+      }
+      return values;
+    }
+
+    function generateBM(n) {
+      const values = [0];
+      for (let i = 1; i <= n; i++) {
+        values[i] = values[i - 1] + randomStep() / Math.sqrt(n);
+      }
+      return values;
+    }
+
+    function generateGBM(S0, mu, sigma, T, n) {
+      const values = [];
+      let B = 0;
+
+      for (let k = 0; k <= n; k++) {
+        if (k > 0) {
+          B += randomStep() / Math.sqrt(n);
+        }
+        const t = (k * T) / n;
+        const S = S0 * Math.exp((mu - 0.5 * sigma * sigma) * t + sigma * B);
+        values.push(S);
+      }
+
+      return values;
+    }
+
+    function drawMultiple(paths) {
+      const canvas = document.getElementById('chart');
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width;
+      const h = canvas.height;
+
+      ctx.clearRect(0, 0, w, h);
+
+      const colors = ['blue', 'red', 'green'];
+
+      const all = paths.flat();
+      const min = Math.min(...all);
+      const max = Math.max(...all);
+      const range = max - min || 1;
+
+      ctx.beginPath();
+      ctx.moveTo(40, 10);
+      ctx.lineTo(40, h - 30);
+      ctx.lineTo(w - 10, h - 30);
+      ctx.stroke();
+
+      paths.forEach((values, idx) => {
+        ctx.beginPath();
+        ctx.strokeStyle = colors[idx];
+        values.forEach((v, i) => {
+          const x = 40 + (i / (values.length - 1)) * (w - 60);
+          const y = (h - 30) - ((v - min) / range) * (h - 50);
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+      });
+    }
+
+    function runAll() {
+      const x0 = parseFloat(document.getElementById('start').value);
+      const n = parseInt(document.getElementById('steps').value, 10);
+      const mu = parseFloat(document.getElementById('mu').value);
+      const sigma = parseFloat(document.getElementById('sigma').value);
+
+      const rw = generateRW(x0, n);
+      const bm = generateBM(n);
+      const gbm = generateGBM(x0, mu, sigma, 1, n);
+
+      drawMultiple([rw, bm, gbm]);
+    }
+
+    runAll();
+  </script>
+</body>
+</html>
